@@ -1,0 +1,62 @@
+version: '2'
+services:
+
+  multi_db_psql1:
+    image: postgres:9.5.5
+    container_name: multi_db_postgres1
+    env_file:
+      - ./env_1.list
+    ports:
+      - "5432/tcp:5432/tcp"
+    volumes:
+      - multi_db-1-data-v:/var/lib/postgresql/data
+    networks:
+      - "multi-db-n"
+
+  multi_db_psql2:
+    image: postgres:9.5.5
+    container_name: multi_db_postgres2
+    env_file:
+      - ./env_2.list
+    ports:
+      - "5431/tcp:5432/tcp"
+      - "5431:5432"
+    volumes:
+      - multi_db-2-data-v:/var/lib/postgresql/data
+    networks:
+      - "multi-db-n"
+
+  multi_db:
+    image: xofspades/multi_db
+    container_name: multi_db
+    build: .
+    command: mix do ecto.create, ecto.migrate, run --no-halt
+    environment:
+      - MIX_ENV=dev
+    volumes:
+      - .:/app
+    depends_on:
+      - multi_db_psql1
+      - multi_db_psql2
+    networks:
+      - "multi-db-n"
+
+  multi_db_test:
+    image: xofspades/multi_db
+    command: mix do ecto.create, ecto.migrate, test
+    environment:
+      - MIX_ENV=test
+    volumes:
+      - .:/app
+    depends_on:
+      - multi_db_psql1
+      - multi_db_psql2
+    networks:
+      - "multi-db-n"
+
+volumes:
+  multi_db-1-data-v :
+  multi_db-2-data-v :
+
+networks:
+  multi-db-n:
